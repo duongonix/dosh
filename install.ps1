@@ -8,7 +8,7 @@ $BIN_PATH    = "$INSTALL_DIR\$ASSET_NAME"
 
 # ============================================
 
-Write-Host "🔹 Installing YourShell..." -ForegroundColor Cyan
+Write-Host "🔹 Installing DoshShell..." -ForegroundColor Cyan
 
 # 1. Kiểm tra PowerShell version
 if ($PSVersionTable.PSVersion.Major -lt 5) {
