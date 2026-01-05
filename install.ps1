@@ -58,7 +58,7 @@ if ($envPath -notlike "*$INSTALL_DIR*") {
 # 7. Kiểm tra cài đặt
 if (Test-Path $BIN_PATH) {
     Write-Host "🎉 Installation completed!"
-    Write-Host "👉 Restart terminal and run: your-shell"
+    Write-Host "👉 Restart terminal and run: dosh"
 } else {
     Write-Error "Installation failed."
 }
