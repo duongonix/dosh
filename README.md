@@ -1,4 +1,4 @@
-# dosh
+# Dosh Shell
 
 **The Developer's Optimized SHell.** *A fast, safe, and cross-platform command-line environment engineered in Rust.*
 
@@ -59,6 +59,16 @@ Because **dosh** is built in Rust, it inherits:
 
 ## 📦 Installation
 
+## Install (Windows)
+
+Open PowerShell and run:
+# Option 1: Install binary file
+
+
+```powershell
+irm https://raw.githubusercontent.com/duongonix/dosh/main/install.ps1 | iex
+```
+
 ### Pre-built Binaries
 1. Go to the [GitHub Releases](https://github.com/username/dosh/releases) page.
 2. Download the executable for your architecture (`windows`, `linux`, or `macos`).
@@ -67,10 +77,6 @@ Because **dosh** is built in Rust, it inherits:
 ### Build from Source
 Ensure you have the latest [Rust toolchain](https://rustup.rs/) installed.
 
-```bash
-# Option 1: Install directly from crates.io
-cargo install dosh
-```
 # Option 2: Clone and build
 git clone [https://github.com/username/dosh.git](https://github.com/username/dosh.git)
 cd dosh
