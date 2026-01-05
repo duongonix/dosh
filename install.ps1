@@ -3,7 +3,7 @@ $GITHUB_USER = "duongonix"
 $REPO_NAME   = "dosh"
 $ASSET_NAME  = "dosh-x86_64-pc-windows-msvc.exe"   # tên file trong GitHub Release
 
-$INSTALL_DIR = "$env:LOCALAPPDATA\YourShell"
+$INSTALL_DIR = "$env:LOCALAPPDATA\dosh"
 $BIN_PATH    = "$INSTALL_DIR\$ASSET_NAME"
 
 # ============================================
