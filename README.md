@@ -16,6 +16,12 @@ In an era where developers often jump between Windows, macOS, and Linux, **dosh*
 
 ---
 
+# Captions
+![alt text](image/DoshShell%201_6_2026%208_30_02%20PM.png)
+![alt text](image/DoshShell%201_6_2026%208_31_35%20PM.png)
+![alt text](image/DoshShell%201_6_2026%208_32_36%20PM.png)
+![alt text](image/DoshShell%201_6_2026%208_33_32%20PM.png)
+
 ## ✨ Features
 
 ### 🛠️ Professional-Grade Built-in Commands
