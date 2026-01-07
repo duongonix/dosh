@@ -76,7 +76,7 @@ if ($envPath -notlike "*$INSTALL_DIR*") {
 # catch {
 #     Write-Warning "⚠ Không thể tải icon, bỏ qua icon"
 #     Write-Warning $_.Exception.Message
-}
+#}
 
 
 
