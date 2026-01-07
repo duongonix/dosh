@@ -6,6 +6,11 @@ $ASSET_NAME = "dosh-x86_64-pc-windows-msvc.exe"   # tên file trong GitHub Relea
 $INSTALL_DIR = "$env:LOCALAPPDATA\dosh"
 $BIN_PATH = "$INSTALL_DIR\$ASSET_NAME"
 
+$ICON_NAME = "dosh.ico"
+$ICON_URL  = "https://raw.githubusercontent.com/$GITHUB_USER/$REPO_NAME/main/assets/dosh.ico"
+$ICON_PATH = "$INSTALL_DIR\$ICON_NAME"
+
+
 # ============================================
 
 Write-Host "🔹 Installing DoshShell..." -ForegroundColor Cyan
@@ -55,6 +60,17 @@ if ($envPath -notlike "*$INSTALL_DIR*") {
     )
     Write-Host "✅ Added to PATH"
 }
+
+# 2.5. Tải icon
+Write-Host "⬇ Downloading icon..."
+
+try {
+    Invoke-WebRequest -Uri $ICON_URL -OutFile $ICON_PATH
+}
+catch {
+    Write-Warning "Không thể tải icon, tiếp tục cài đặt không có icon"
+}
+
 
 # 7. Kiểm tra cài đặt
 if (Test-Path $BIN_PATH) {
