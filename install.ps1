@@ -1,10 +1,10 @@
 # ================== CONFIG ==================
 $GITHUB_USER = "duongonix"
-$REPO_NAME   = "dosh"
-$ASSET_NAME  = "dosh-x86_64-pc-windows-msvc.exe"   # tên file trong GitHub Release
+$REPO_NAME = "dosh"
+$ASSET_NAME = "dosh-x86_64-pc-windows-msvc.exe"   # tên file trong GitHub Release
 
 $INSTALL_DIR = "$env:LOCALAPPDATA\dosh"
-$BIN_PATH    = "$INSTALL_DIR\$ASSET_NAME"
+$BIN_PATH = "$INSTALL_DIR\$ASSET_NAME"
 
 # ============================================
 
@@ -26,7 +26,8 @@ $apiUrl = "https://api.github.com/repos/$GITHUB_USER/$REPO_NAME/releases/latest"
 
 try {
     $release = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "PowerShell" }
-} catch {
+}
+catch {
     Write-Error "Failed to fetch GitHub release."
     exit 1
 }
@@ -59,6 +60,47 @@ if ($envPath -notlike "*$INSTALL_DIR*") {
 if (Test-Path $BIN_PATH) {
     Write-Host "🎉 Installation completed!"
     Write-Host "👉 Restart terminal and run: dosh"
-} else {
+
+    $settingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+
+    if (-not (Test-Path $settingsPath)) {
+        Write-Error "Không tìm thấy settings.json của Windows Terminal"
+        exit 1
+    }
+
+    $json = Get-Content $settingsPath -Raw | ConvertFrom-Json
+
+    # ID cố định cho dosh (không đổi mỗi lần)
+    $doshGuid = "{3c4b9c8a-1b9b-4e22-9f71-dosh00000001}"
+
+    # Kiểm tra profile đã tồn tại chưa
+    $exists = $json.profiles.list | Where-Object { $_.guid -eq $doshGuid }
+
+    if ($exists) {
+        Write-Host "Profile dosh đã tồn tại, không cần thêm"
+        exit 0
+    }
+
+    $path = "$env:LOCALAPPDATA\dosh"
+
+
+    # Thêm profile mới
+    $doshProfile = @{
+        guid              = $doshGuid
+        name              = "dosh"
+        commandline       = "$path\dosh-x86_64-pc-windows-msvc.exe"
+        startingDirectory = "%USERPROFILE%"
+        icon              = "$path\dosh.ico"
+    }
+
+    $json.profiles.list += $doshProfile
+
+    # Ghi lại file
+    $json | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
+
+    Write-Host "Đã thêm profile DoshShell vào Windows Terminal"
+
+}
+else {
     Write-Error "Installation failed."
 }
