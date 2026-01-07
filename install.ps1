@@ -61,24 +61,6 @@ if ($envPath -notlike "*$INSTALL_DIR*") {
     Write-Host "✅ Added to PATH"
 }
 
-# 2.5. Tải icon (AN TOÀN)
-# Write-Host "⬇ Downloading icon..."
-
-# try {
-#     Invoke-WebRequest `
-#         -Uri $ICON_URL `
-#         -OutFile $ICON_PATH `
-#         -TimeoutSec 15 `
-#         -ErrorAction Stop
-
-#     Write-Host "✅ Icon downloaded"
-# }
-# catch {
-#     Write-Warning "⚠ Không thể tải icon, bỏ qua icon"
-#     Write-Warning $_.Exception.Message
-#}
-
-
 
 # 7. Kiểm tra cài đặt
 if (Test-Path $BIN_PATH) {
