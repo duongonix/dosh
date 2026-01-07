@@ -75,6 +75,8 @@ Open PowerShell and run:
 irm https://raw.githubusercontent.com/duongonix/dosh/main/install.ps1 | iex
 ```
 
+now open Window Terminal and select Dosh profile and chill =)))
+
 ### Pre-built Binaries
 1. Go to the [GitHub Releases](https://github.com/username/dosh/releases) page.
 2. Download the executable for your architecture (`windows`, `linux`, or `macos`).
