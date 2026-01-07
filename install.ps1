@@ -7,7 +7,7 @@ $INSTALL_DIR = "$env:LOCALAPPDATA\dosh"
 $BIN_PATH = "$INSTALL_DIR\$ASSET_NAME"
 
 $ICON_NAME = "dosh.ico"
-$ICON_URL  = "https://raw.githubusercontent.com/$GITHUB_USER/$REPO_NAME/main/assets/dosh.ico"
+$ICON_URL  = "https://raw.githubusercontent.com/$GITHUB_USER/$REPO_NAME/main/dosh.ico"
 $ICON_PATH = "$INSTALL_DIR\$ICON_NAME"
 
 
