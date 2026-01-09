@@ -103,7 +103,7 @@ if (Test-Path $settingsPath) {
 
         $profile = @{
             guid              = [guid]::NewGuid().ToString()
-            name              = "dosh"
+            name              = "DoshShell"
             commandline       = $BIN_PATH
             startingDirectory = "%USERPROFILE%"
             icon              = $iconForProfile
