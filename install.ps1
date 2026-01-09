@@ -1,55 +1,78 @@
 # ================== CONFIG ==================
 $GITHUB_USER = "duongonix"
-$REPO_NAME = "dosh"
-$ASSET_NAME = "dosh-x86_64-pc-windows-msvc.exe"   # tên file trong GitHub Release
+$REPO_NAME   = "dosh"
+$ASSET_NAME  = "dosh-x86_64-pc-windows-msvc.exe"
 
 $INSTALL_DIR = "$env:LOCALAPPDATA\dosh"
-$BIN_PATH = "$INSTALL_DIR\$ASSET_NAME"
+$BIN_PATH    = "$INSTALL_DIR\$ASSET_NAME"
 
 $ICON_NAME = "dosh.ico"
 $ICON_URL  = "https://raw.githubusercontent.com/$GITHUB_USER/$REPO_NAME/main/dosh.ico"
 $ICON_PATH = "$INSTALL_DIR\$ICON_NAME"
-
-
 # ============================================
 
 Write-Host "🔹 Installing DoshShell..." -ForegroundColor Cyan
 
-# 1. Kiểm tra PowerShell version
+# 1. Check PowerShell version
 if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-Error "PowerShell 5.0+ is required."
+    Write-Error "PowerShell 5.0+ is required"
     exit 1
 }
 
-# 2. Tạo thư mục cài đặt
+# 2. Create install dir
 if (!(Test-Path $INSTALL_DIR)) {
     New-Item -ItemType Directory -Path $INSTALL_DIR | Out-Null
 }
 
-# 3. Lấy thông tin release mới nhất
+# 3. Get latest release
 $apiUrl = "https://api.github.com/repos/$GITHUB_USER/$REPO_NAME/releases/latest"
 
 try {
-    $release = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "PowerShell" }
+    $release = Invoke-RestMethod -Uri $apiUrl -Headers @{
+        "User-Agent" = "PowerShell"
+    }
 }
 catch {
-    Write-Error "Failed to fetch GitHub release."
+    Write-Error "Failed to fetch GitHub release"
     exit 1
 }
 
-# 4. Tìm asset exe
+# 4. Find asset
 $asset = $release.assets | Where-Object { $_.name -eq $ASSET_NAME }
 
 if (-not $asset) {
-    Write-Error "Release asset '$ASSET_NAME' not found."
+    Write-Error "Asset '$ASSET_NAME' not found"
     exit 1
 }
 
-# 5. Tải file exe
+# 5. Download binary
 Write-Host "⬇ Downloading $ASSET_NAME..."
-Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $BIN_PATH
+Invoke-WebRequest `
+    -Uri $asset.browser_download_url `
+    -OutFile $BIN_PATH `
+    -UseBasicParsing
 
-# 6. Thêm vào PATH (User)
+# 6. Download icon (safe)
+Write-Host "⬇ Downloading icon..."
+try {
+    if (!(Test-Path $ICON_PATH)) {
+        Invoke-WebRequest `
+            -Uri $ICON_URL `
+            -OutFile $ICON_PATH `
+            -TimeoutSec 10 `
+            -ErrorAction Stop
+
+        Write-Host "✅ Icon downloaded"
+    }
+    else {
+        Write-Host "ℹ Icon already exists"
+    }
+}
+catch {
+    Write-Warning "⚠ Failed to download icon, skipping"
+}
+
+# 7. Add to PATH (User)
 $envPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 
 if ($envPath -notlike "*$INSTALL_DIR*") {
@@ -61,52 +84,47 @@ if ($envPath -notlike "*$INSTALL_DIR*") {
     Write-Host "✅ Added to PATH"
 }
 
+# 8. Windows Terminal profile
+$settingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
 
-# 7. Kiểm tra cài đặt
-if (Test-Path $BIN_PATH) {
-    Write-Host "🎉 Installation completed!"
-    Write-Host "👉 Restart terminal and run: dosh"
-
-    $settingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-
-    if (-not (Test-Path $settingsPath)) {
-        Write-Error "Không tìm thấy settings.json của Windows Terminal"
-        exit 1
-    }
+if (Test-Path $settingsPath) {
+    Write-Host "🔧 Configuring Windows Terminal..."
 
     $json = Get-Content $settingsPath -Raw | ConvertFrom-Json
 
-    # ID cố định cho dosh (không đổi mỗi lần)
-    $doshGuid = [guid]::NewGuid().ToString()
+    $exists = $json.profiles.list | Where-Object { $_.name -eq "dosh" }
 
-    # Kiểm tra profile đã tồn tại chưa
-    $exists = $json.profiles.list | Where-Object { $_.guid -eq $doshGuid }
+    if (-not $exists) {
+        $iconForProfile = if (Test-Path $ICON_PATH) {
+            $ICON_PATH
+        } else {
+            "ms-appx:///ProfileIcons/pwsh.png"
+        }
 
-    if ($exists) {
-        Write-Host "Profile dosh đã tồn tại, không cần thêm"
-        exit 0
+        $profile = @{
+            guid              = [guid]::NewGuid().ToString()
+            name              = "dosh"
+            commandline       = $BIN_PATH
+            startingDirectory = "%USERPROFILE%"
+            icon              = $iconForProfile
+        }
+
+        $json.profiles.list += $profile
+        $json | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
+
+        Write-Host "✅ Windows Terminal profile added"
     }
-
-    $path = "$env:LOCALAPPDATA\dosh"
-
-
-    # Thêm profile mới
-    $doshProfile = @{
-        guid              = $doshGuid
-        name              = "dosh"
-        commandline       = "$path\dosh-x86_64-pc-windows-msvc.exe"
-        startingDirectory = "%USERPROFILE%"
-        icon              = "$path\dosh.ico"
+    else {
+        Write-Host "ℹ Windows Terminal profile already exists"
     }
+}
 
-    $json.profiles.list += $doshProfile
-
-    # Ghi lại file
-    $json | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
-
-    Write-Host "Đã thêm profile DoshShell vào Windows Terminal"
-
+# 9. Final check
+if (Test-Path $BIN_PATH) {
+    Write-Host ""
+    Write-Host "🎉 DoshShell installed successfully!" -ForegroundColor Green
+    Write-Host "👉 Restart terminal and run: dosh"
 }
 else {
-    Write-Error "Installation failed."
+    Write-Error "Installation failed"
 }
