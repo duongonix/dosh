@@ -77,7 +77,7 @@ if (Test-Path $BIN_PATH) {
     $json = Get-Content $settingsPath -Raw | ConvertFrom-Json
 
     # ID cố định cho dosh (không đổi mỗi lần)
-    $doshGuid = "{3c4b9c8a-1b9b-4e22-9f71-dosh00000001}"
+    $doshGuid = [guid]::NewGuid().ToString()
 
     # Kiểm tra profile đã tồn tại chưa
     $exists = $json.profiles.list | Where-Object { $_.guid -eq $doshGuid }
