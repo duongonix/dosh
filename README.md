@@ -17,6 +17,39 @@ Unlike classic shells that treat everything as plain text, Dosh treats data as t
 
 ![Dosh](/assets/demo.png)
 
+## Install
+
+### Quick install (latest)
+
+Linux/macOS:
+```bash
+curl -fsSL https://raw.githubusercontent.com/duongonix/dosh/main/scripts/install.sh | sh
+```
+
+Windows (PowerShell):
+```powershell
+iwr -useb https://raw.githubusercontent.com/duongonix/dosh/main/scripts/install.ps1 | iex
+```
+
+### Install specific version
+
+Linux/macOS:
+```bash
+curl -fsSL https://raw.githubusercontent.com/duongonix/dosh/main/scripts/install.sh | sh -s -- v1.0.0
+```
+
+Windows (PowerShell):
+```powershell
+& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/duongonix/dosh/main/scripts/install.ps1))) -Version v1.0.0
+```
+
+### Verify
+
+```bash
+dosh --version
+durl --version
+```
+
 
 ### Dosh cheatsheet
 
