@@ -4,7 +4,7 @@ use dosh_durl::{DurlRunOptions, run};
 use dosh_value::Value;
 
 #[derive(Parser, Debug)]
-#[command(name = "durl")]
+#[command(name = "durl", version)]
 #[command(about = "Structured HTTP client")]
 struct Cli {
     #[arg(trailing_var_arg = true)]

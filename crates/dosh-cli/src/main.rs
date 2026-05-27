@@ -8,7 +8,7 @@ use dosh_plugin::{
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
-#[command(name = "dosh", about = "Dosh modern shell")]
+#[command(name = "dosh", about = "Dosh modern shell", version)]
 struct Cli {
     #[arg(short = 'c', long = "command")]
     command: Option<String>,
