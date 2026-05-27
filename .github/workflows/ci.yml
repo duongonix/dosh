@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, "codex/**" ]
+  pull_request:
+
+jobs:
+  ci:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: fmt
+        run: cargo fmt --check
+      - name: check
+        run: cargo check --workspace
+      - name: test
+        run: cargo test --workspace

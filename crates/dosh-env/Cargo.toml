@@ -1,0 +1,10 @@
+[package]
+name = "dosh-env"
+version = "1.0.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+directories.workspace = true

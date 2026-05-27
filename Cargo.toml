@@ -1,0 +1,70 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/dosh-cli",
+  "crates/dosh-core",
+  "crates/dosh-parser",
+  "crates/dosh-ast",
+  "crates/dosh-runtime",
+  "crates/dosh-value",
+  "crates/dosh-env",
+  "crates/dosh-completion",
+  "crates/dosh-history",
+  "crates/dosh-prompt",
+  "crates/dosh-highlight",
+  "crates/dosh-builtins",
+  "crates/dosh-pty",
+  "crates/dosh-plugin",
+  "crates/dosh-wasm",
+  "crates/dosh-ai",
+  "crates/dosh-config",
+  "crates/dosh-security",
+  "crates/dosh-tui",
+  "crates/dosh-telemetry",
+  "crates/dosh-testkit",
+  "crates/dosh-dedit",
+  "crates/durl-core",
+  "crates/dosh-durl",
+  "crates/durl-cli"
+]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/duongonix/dosh"
+
+[workspace.dependencies]
+anyhow = "1"
+thiserror = "1"
+miette = { version = "7", features = ["fancy"] }
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+serde_yaml = "0.9"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+reedline = "0.36"
+crossterm = "0.28"
+ratatui = "0.29"
+nu-ansi-term = "0.50"
+chumsky = "0.9"
+shell-words = "1"
+shlex = "1"
+globset = "0.4"
+walkdir = "2"
+ignore = "0.4"
+portable-pty = "0.8"
+rusqlite = { version = "0.32", features = ["bundled"] }
+fuzzy-matcher = "0.3"
+wasmtime = "26"
+wit-bindgen = "0.34"
+keyring = "3"
+directories = "5"
+notify = "7"
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "multipart"] }
+regex = "1"
+time = "0.3"
+uuid = { version = "1", features = ["v4", "serde"] }
+indexmap = { version = "2", features = ["serde"] }

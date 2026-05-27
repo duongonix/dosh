@@ -1,0 +1,51 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+
+    <linearGradient id="glass" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E293B"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+
+    <linearGradient id="accent" x1="160" y1="160" x2="352" y2="352" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E0F2FE"/>
+      <stop offset="1" stop-color="#7DD3FC"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="14" stdDeviation="24" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect x="8" y="8" width="496" height="496" rx="124" fill="url(#bg)" filter="url(#shadow)"/>
+
+  <!-- Inner terminal -->
+  <rect x="0" y="68" width="512" height="376" rx="56" fill="url(#glass)"/>
+
+  <!-- Top dots -->
+  <circle cx="46" cy="116" r="10" fill="#38BDF8"/>
+  <circle cx="78" cy="116" r="10" fill="#7DD3FC"/>
+  <circle cx="110" cy="116" r="10" fill="#BAE6FD"/>
+
+  <!-- Prompt -->
+  <path d="M80 206L188 256L80 306"
+        stroke="url(#accent)"
+        stroke-width="30"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+
+  <!-- Cursor -->
+  <rect x="228" y="236" width="220" height="40" rx="20" fill="#7DD3FC"/>
+
+  <!-- Brand -->
+  <text x="350" y="350"
+        text-anchor="middle"
+        fill="#E0F2FE"
+        font-family="JetBrains Mono, Cascadia Code, Segoe UI, sans-serif"
+        font-size="64"
+        font-weight="700"
+        letter-spacing="2">dosh</text>
+
+
+</svg>

@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (for manual runs), e.g. v1.0.0"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN_DOSH: dosh
+  BIN_DURL: durl
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Verify workspace
+        run: |
+          cargo fmt --check
+          cargo check --workspace
+          cargo test --workspace
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive_ext: tar.gz
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            archive_ext: tar.gz
+          - name: macos-x86_64
+            runner: macos-13
+            target: x86_64-apple-darwin
+            archive_ext: tar.gz
+          - name: macos-aarch64
+            runner: macos-14
+            target: aarch64-apple-darwin
+            archive_ext: tar.gz
+          - name: windows-x86_64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive_ext: zip
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build dosh + durl
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }} -p dosh-cli -p durl-cli
+
+      - name: Prepare package (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="dosh-${{ github.ref_name }}-${{ matrix.name }}"
+          STAGE="$PKG"
+          mkdir -p "$STAGE"
+          cp "target/${{ matrix.target }}/release/${BIN_DOSH}" "$STAGE/"
+          cp "target/${{ matrix.target }}/release/${BIN_DURL}" "$STAGE/"
+          [ -f README.md ] && cp README.md "$STAGE/" || true
+          [ -f LICENSE ] && cp LICENSE "$STAGE/" || true
+          tar -czf "${PKG}.tar.gz" "$STAGE"
+          shasum -a 256 "${PKG}.tar.gz" > "${PKG}.sha256"
+
+      - name: Prepare package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pkg = "dosh-${{ github.ref_name }}-${{ matrix.name }}"
+          $stage = Join-Path (Get-Location) $pkg
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${env:BIN_DOSH}.exe" (Join-Path $stage "${env:BIN_DOSH}.exe")
+          Copy-Item "target/${{ matrix.target }}/release/${env:BIN_DURL}.exe" (Join-Path $stage "${env:BIN_DURL}.exe")
+          if (Test-Path "README.md") { Copy-Item "README.md" (Join-Path $stage "README.md") }
+          if (Test-Path "LICENSE") { Copy-Item "LICENSE" (Join-Path $stage "LICENSE") }
+          Compress-Archive -Path "$stage\*" -DestinationPath "${pkg}.zip" -Force
+          $hash = (Get-FileHash "${pkg}.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  ${pkg}.zip" | Out-File -Encoding ascii "${pkg}.sha256"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            *.tar.gz
+            *.zip
+            *.sha256
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Generate checksums manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          find dist -type f -name "*.sha256" -print0 | xargs -0 cat > dist/SHA256SUMS
+
+      - name: Create/Update Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+          files: |
+            dist/**/*.tar.gz
+            dist/**/*.zip
+            dist/**/*.sha256
+            dist/SHA256SUMS
+          generate_release_notes: true

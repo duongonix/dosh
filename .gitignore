@@ -1,0 +1,16 @@
+/target
+**/*.rs.bk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+/docs
+/std
+/tests
+/packages
+/hello-http
+/completions
+/tmp-empty-plugin
+/dosh-web
+/examples
+/.tmp_check.rs

@@ -1,0 +1,17 @@
+[package]
+name = "dosh-runtime"
+version = "1.0.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+dosh-ast = { path = "../dosh-ast" }
+dosh-env = { path = "../dosh-env" }
+dosh-builtins = { path = "../dosh-builtins" }
+dosh-config = { path = "../dosh-config" }
+dosh-parser = { path = "../dosh-parser" }
+dosh-plugin = { path = "../dosh-plugin" }
+dosh-wasm = { path = "../dosh-wasm" }
+dosh-value = { path = "../dosh-value" }
