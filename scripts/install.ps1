@@ -43,12 +43,25 @@ try {
   Invoke-WebRequest -Uri $url -OutFile $zipPath
 
   Expand-Archive -Path $zipPath -DestinationPath $workDir -Force
-  $pkgDir = Join-Path $workDir ("dosh-$Version-windows-$archName")
-  if (-not (Test-Path $pkgDir)) {
-    $candidate = Get-ChildItem -Path $workDir -Directory | Select-Object -First 1
-    if ($null -eq $candidate) { throw "Package layout not recognized" }
-    $pkgDir = $candidate.FullName
+
+$expectedDir = Join-Path $workDir ("dosh-$Version-windows-$archName")
+if (Test-Path (Join-Path $expectedDir "dosh.exe")) {
+  $pkgDir = $expectedDir
+}
+elseif (Test-Path (Join-Path $workDir "dosh.exe")) {
+  $pkgDir = $workDir
+}
+else {
+  $candidate = Get-ChildItem -Path $workDir -Directory |
+    Where-Object { Test-Path (Join-Path $_.FullName "dosh.exe") } |
+    Select-Object -First 1
+
+  if ($null -eq $candidate) {
+    throw "Package layout not recognized: dosh.exe was not found after extraction"
   }
+
+  $pkgDir = $candidate.FullName
+}
 
   Copy-Item -Force (Join-Path $pkgDir "dosh.exe") (Join-Path $InstallDir "dosh.exe")
   if (Test-Path (Join-Path $pkgDir "durl.exe")) {
