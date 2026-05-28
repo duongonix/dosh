@@ -8,7 +8,7 @@ on:
     inputs:
       tag:
         description: "Release tag (for manual runs), e.g. v1.0.0"
-        required: false
+        required: true
         type: string
 
 permissions:
@@ -18,6 +18,7 @@ env:
   CARGO_TERM_COLOR: always
   BIN_DOSH: dosh
   BIN_DURL: durl
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
   verify:
@@ -25,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - uses: dtolnay/rust-toolchain@stable
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -45,26 +48,23 @@ jobs:
           - name: linux-x86_64
             runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            archive_ext: tar.gz
           - name: linux-aarch64
             runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            archive_ext: tar.gz
           - name: macos-x86_64
             runner: macos-13
             target: x86_64-apple-darwin
-            archive_ext: tar.gz
           - name: macos-aarch64
             runner: macos-14
             target: aarch64-apple-darwin
-            archive_ext: tar.gz
           - name: windows-x86_64
             runner: windows-latest
             target: x86_64-pc-windows-msvc
-            archive_ext: zip
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -80,7 +80,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PKG="dosh-${{ github.ref_name }}-${{ matrix.name }}"
+          PKG="dosh-${RELEASE_TAG}-${{ matrix.name }}"
           STAGE="$PKG"
           mkdir -p "$STAGE"
           cp "target/${{ matrix.target }}/release/${BIN_DOSH}" "$STAGE/"
@@ -94,7 +94,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $pkg = "dosh-${{ github.ref_name }}-${{ matrix.name }}"
+          $pkg = "dosh-${env:RELEASE_TAG}-${{ matrix.name }}"
           $stage = Join-Path (Get-Location) $pkg
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/${env:BIN_DOSH}.exe" (Join-Path $stage "${env:BIN_DOSH}.exe")
@@ -124,6 +124,11 @@ jobs:
         with:
           path: dist
 
+      - name: List dist files
+        shell: bash
+        run: |
+          find dist -type f -maxdepth 3 -print
+
       - name: Generate checksums manifest
         shell: bash
         run: |
@@ -133,7 +138,7 @@ jobs:
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             dist/**/*.tar.gz
             dist/**/*.zip
