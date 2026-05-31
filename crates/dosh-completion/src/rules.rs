@@ -383,7 +383,11 @@ fn split_header_body_start(line: &str) -> Option<(&str, usize)> {
     let b = line.find('[');
     let c = line.find('{');
     match (b, c) {
-        (Some(x), Some(y)) => Some(if x < y { (&line[..x], x) } else { (&line[..y], y) }),
+        (Some(x), Some(y)) => Some(if x < y {
+            (&line[..x], x)
+        } else {
+            (&line[..y], y)
+        }),
         (Some(x), None) => Some((&line[..x], x)),
         (None, Some(y)) => Some((&line[..y], y)),
         _ => None,

@@ -1,5 +1,5 @@
-mod repl_highlighter;
 mod repl_completer;
+mod repl_highlighter;
 mod ui_error;
 mod update;
 

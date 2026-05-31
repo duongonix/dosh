@@ -45,4 +45,3 @@ fn find_token_start(s: &str) -> usize {
     }
     start
 }
-
