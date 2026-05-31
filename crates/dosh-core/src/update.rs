@@ -117,16 +117,31 @@ fn render_update_banner(info: &UpdateInfo) {
     println!();
     println!("\x1b[36m┌{line}┐\x1b[0m");
     println!("{}", box_line("Dosh update available", width));
-    println!("{}", box_line(&format!("Current: {}   Latest: {}", info.current, latest), width));
+    println!(
+        "{}",
+        box_line(
+            &format!("Current: {}   Latest: {}", info.current, latest),
+            width
+        )
+    );
     let release_url = format!("https://github.com/{REPO}/releases/tag/{}", info.latest_tag);
     println!("{}", box_line(&format!("Release: {release_url}"), width));
     println!("\x1b[36m└{line}┘\x1b[0m");
 }
 
 fn box_line(text: &str, width: usize) -> String {
-    let plain = text.chars().take(width.saturating_sub(2)).collect::<String>();
-    let pad = width.saturating_sub(2).saturating_sub(plain.chars().count());
-    format!("\x1b[36m│\x1b[0m {}{}\x1b[36m│\x1b[0m", plain, " ".repeat(pad))
+    let plain = text
+        .chars()
+        .take(width.saturating_sub(2))
+        .collect::<String>();
+    let pad = width
+        .saturating_sub(2)
+        .saturating_sub(plain.chars().count());
+    format!(
+        "\x1b[36m│\x1b[0m {}{}\x1b[36m│\x1b[0m",
+        plain,
+        " ".repeat(pad)
+    )
 }
 
 fn ask_yes_no(prompt: &str) -> Result<bool> {
