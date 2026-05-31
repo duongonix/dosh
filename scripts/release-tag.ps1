@@ -53,7 +53,8 @@ foreach ($file in $cargoTomls) {
     }
   }
   if ($pkgIdx -lt 0) {
-    Fail "invalid Cargo.toml (missing [package]): $($file.FullName)"
+    Write-Host "  skip (workspace-only): $($file.FullName)"
+    continue
   }
   for ($j = $pkgIdx + 1; $j -lt $lines.Count; $j++) {
     if ($lines[$j] -match '^\s*\[') { break }

@@ -36,8 +36,16 @@ fi
 echo "==> Updating crate versions to $VERSION"
 export REL_VERSION="$VERSION"
 while IFS= read -r -d '' file; do
+  if ! grep -q '^[[:space:]]*\[package\][[:space:]]*$' "$file"; then
+    echo "  skip (workspace-only): $file"
+    continue
+  fi
+  before="$(cat "$file")"
   perl -0777 -i -pe 's{(^\s*\[package\]\s*.*?^\s*version\s*=\s*")([^"]+)(")}{$1 . $ENV{REL_VERSION} . $3}mse' "$file"
-  echo "  updated: $file"
+  after="$(cat "$file")"
+  if [[ "$before" != "$after" ]]; then
+    echo "  updated: $file"
+  fi
 done < <(find . -name Cargo.toml -not -path "*/target/*" -not -path "*/.git/*" -print0)
 
 echo "==> Running checks"
