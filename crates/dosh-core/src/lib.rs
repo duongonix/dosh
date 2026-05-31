@@ -1,5 +1,6 @@
 mod repl_highlighter;
 mod ui_error;
+mod update;
 
 use dosh_completion::CompletionEngine;
 use dosh_config::DoshPaths;
@@ -84,6 +85,9 @@ impl Shell {
 
     pub fn run(&mut self) -> ShellResult {
         self.initialize_session()?;
+        if self.config.interactive && self.config.command.is_none() {
+            let _ = update::check_and_prompt_update(true);
+        }
         if let Some(command) = self.config.command.clone() {
             self.execute_line(&command)?;
             return Ok(());
@@ -233,6 +237,13 @@ impl Shell {
 
     fn run_phase2_meta_commands(&self, line: &str) -> Option<RuntimeOutcome> {
         let trimmed = line.trim();
+
+        if trimmed == "update" {
+            if let Err(err) = update::run_update_command() {
+                eprintln!("{}", format_error_report(&err));
+            }
+            return Some(RuntimeOutcome::ok());
+        }
 
         if let Some(prefix) = trimmed.strip_prefix(":complete ") {
             let suggestions = self.completion.complete(prefix, &self.env);
