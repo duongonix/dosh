@@ -762,21 +762,21 @@ dependencies = [
 
 [[package]]
 name = "dosh-ai"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
 ]
 
 [[package]]
 name = "dosh-ast"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "dosh-builtins"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "calamine",
@@ -804,7 +804,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-cli"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -819,7 +819,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-completion"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "dosh-ast",
  "dosh-builtins",
@@ -833,7 +833,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-config"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "directories",
@@ -843,7 +843,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-core"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "crossterm",
@@ -864,7 +864,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-dedit"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -875,7 +875,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-durl"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "dosh-value",
@@ -887,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-env"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "directories",
@@ -895,11 +895,11 @@ dependencies = [
 
 [[package]]
 name = "dosh-highlight"
-version = "1.0.7"
+version = "1.0.8"
 
 [[package]]
 name = "dosh-history"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "fuzzy-matcher",
@@ -908,7 +908,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-parser"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "chumsky",
@@ -918,7 +918,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-plugin"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -935,7 +935,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-prompt"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "chrono",
  "dosh-config",
@@ -947,14 +947,14 @@ dependencies = [
 
 [[package]]
 name = "dosh-pty"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "portable-pty",
 ]
 
 [[package]]
 name = "dosh-runtime"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "dosh-ast",
@@ -969,14 +969,14 @@ dependencies = [
 
 [[package]]
 name = "dosh-security"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "regex",
 ]
 
 [[package]]
 name = "dosh-telemetry"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "tracing",
  "tracing-subscriber",
@@ -984,14 +984,14 @@ dependencies = [
 
 [[package]]
 name = "dosh-testkit"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
 ]
 
 [[package]]
 name = "dosh-tui"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "crossterm",
  "ratatui",
@@ -999,7 +999,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-value"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "indexmap",
@@ -1011,7 +1011,7 @@ dependencies = [
 
 [[package]]
 name = "dosh-wasm"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "dosh-plugin",
@@ -1028,7 +1028,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
 name = "durl-cli"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -1038,7 +1038,7 @@ dependencies = [
 
 [[package]]
 name = "durl-core"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "anyhow",
  "reqwest",

@@ -1,6 +1,6 @@
 [package]
 name = "durl-core"
-version = "1.0.7"
+version = "1.0.8"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
