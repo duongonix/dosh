@@ -16,8 +16,8 @@ use reedline::{
     Reedline, ReedlineEvent, ReedlineMenu, Signal, default_emacs_keybindings,
 };
 use repl_highlighter::DoshReedlineHighlighter;
-use std::path::PathBuf;
 use std::io::Write;
+use std::path::PathBuf;
 use std::time::Instant;
 use ui_error::format_error_report;
 

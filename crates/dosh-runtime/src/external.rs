@@ -77,4 +77,3 @@ fn pathext_list() -> Vec<String> {
         })
         .collect()
 }
-
