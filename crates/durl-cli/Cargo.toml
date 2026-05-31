@@ -1,6 +1,4 @@
-[package]
-name = "durl-cli"
-version = "1.0.1"
+$11.0.4"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
