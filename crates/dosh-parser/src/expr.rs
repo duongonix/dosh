@@ -43,6 +43,9 @@ pub fn parse_expression_result(value: &str) -> Result<Expression> {
     if value.eq_ignore_ascii_case("false") {
         return Ok(Expression::Bool(false));
     }
+    if let Some(inner) = parse_here_single_string(value) {
+        return Ok(Expression::StringLiteral(inner));
+    }
     if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 {
         return Ok(Expression::StringLiteral(
             value[1..value.len() - 1].to_string(),
@@ -68,6 +71,15 @@ pub fn parse_expression_result(value: &str) -> Result<Expression> {
     }
 
     Ok(Expression::Identifier(value.to_string()))
+}
+
+fn parse_here_single_string(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if !trimmed.starts_with("@'") || !trimmed.ends_with("'@") || trimmed.len() < 4 {
+        return None;
+    }
+    let inner = &trimmed[2..trimmed.len() - 2];
+    Some(inner.to_string())
 }
 
 fn parse_pipeline_expr(value: &str) -> Result<Option<Expression>> {

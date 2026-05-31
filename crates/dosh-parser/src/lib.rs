@@ -309,4 +309,33 @@ mod tests {
             _ => panic!("expected if"),
         }
     }
+
+    #[test]
+    fn parse_here_string_literal_expression() {
+        let parser = Parser::new();
+        let script = parser.parse_script("@'hello\nworld'@").unwrap();
+        assert_eq!(script.statements.len(), 1);
+        match &script.statements[0] {
+            Statement::Expr(Expression::StringLiteral(s)) => {
+                assert!(s.contains("hello"));
+                assert!(s.contains("world"));
+            }
+            _ => panic!("expected string literal expression"),
+        }
+    }
+
+    #[test]
+    fn parse_here_string_pipeline_source() {
+        let parser = Parser::new();
+        let script = parser.parse_script("@'a\nb'@ | save x.txt").unwrap();
+        assert_eq!(script.statements.len(), 1);
+        match &script.statements[0] {
+            Statement::Pipeline(p) => {
+                assert_eq!(p.commands.len(), 2);
+                assert_eq!(p.commands[0].name, "__literal__");
+                assert_eq!(p.commands[1].name, "save");
+            }
+            _ => panic!("expected pipeline"),
+        }
+    }
 }

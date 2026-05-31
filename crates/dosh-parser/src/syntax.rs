@@ -15,13 +15,30 @@ pub fn split_top_level_statements_with_offsets(input: &str) -> Result<Vec<(Strin
     let mut parts = Vec::new();
     let mut depth = 0i32;
     let mut in_string = false;
+    let mut in_here_single = false;
     let mut escaped = false;
     let mut start = 0usize;
+    let mut i = 0usize;
+    while i < input.len() {
+        if in_here_single {
+            if input[i..].starts_with("'@") {
+                in_here_single = false;
+                i += 2;
+                continue;
+            }
+            i += input[i..].chars().next().map(char::len_utf8).unwrap_or(1);
+            continue;
+        }
 
-    for (idx, ch) in input.char_indices() {
+        let ch = input[i..]
+            .chars()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("invalid input"))?;
+
         if in_string {
             if escaped {
                 escaped = false;
+                i += ch.len_utf8();
                 continue;
             }
             if ch == '\\' {
@@ -29,6 +46,13 @@ pub fn split_top_level_statements_with_offsets(input: &str) -> Result<Vec<(Strin
             } else if ch == '"' {
                 in_string = false;
             }
+            i += ch.len_utf8();
+            continue;
+        }
+
+        if input[i..].starts_with("@'") {
+            in_here_single = true;
+            i += 2;
             continue;
         }
 
@@ -37,23 +61,27 @@ pub fn split_top_level_statements_with_offsets(input: &str) -> Result<Vec<(Strin
             '{' => depth += 1,
             '}' => {
                 if depth == 0 {
-                    anyhow::bail!("unmatched closing brace at byte {idx}");
+                    anyhow::bail!("unmatched closing brace at byte {i}");
                 }
                 depth -= 1;
             }
             ';' | '\n' if depth == 0 => {
-                let part = input[start..idx].trim();
+                let part = input[start..i].trim();
                 if !part.is_empty() {
                     parts.push((part.to_string(), start));
                 }
-                start = idx + ch.len_utf8();
+                start = i + ch.len_utf8();
             }
             _ => {}
         }
+        i += ch.len_utf8();
     }
 
     if in_string {
         anyhow::bail!("unterminated string literal");
+    }
+    if in_here_single {
+        anyhow::bail!("unterminated here-string literal");
     }
     if depth != 0 {
         anyhow::bail!("unclosed block: missing '}}'");

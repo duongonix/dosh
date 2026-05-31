@@ -333,6 +333,22 @@ simple_builtin!(
                     Value::String(paths.plugins_file().display().to_string()),
                 );
                 rec.insert(
+                    "commands_dir".into(),
+                    Value::String(paths.commands_dir().display().to_string()),
+                );
+                rec.insert(
+                    "completions_dir".into(),
+                    Value::String(paths.completions_dir().display().to_string()),
+                );
+                rec.insert(
+                    "modules_dir".into(),
+                    Value::String(paths.modules_dir().display().to_string()),
+                );
+                rec.insert(
+                    "plugins_dir".into(),
+                    Value::String(paths.plugins_dir().display().to_string()),
+                );
+                rec.insert(
                     "history.db".into(),
                     Value::String(paths.history_db_file().display().to_string()),
                 );

@@ -104,6 +104,7 @@ impl Shell {
 
     fn repl(&mut self) -> ShellResult {
         let mut line_editor = self.build_line_editor()?;
+        let mut pending = String::new();
 
         loop {
             let term_width = crossterm::terminal::size()
@@ -115,20 +116,26 @@ impl Shell {
                 self.last_duration_ms,
             );
             let rendered = self.prompt_engine.render(&pctx, term_width);
+            let prompt_left = if pending.is_empty() {
+                rendered.left
+            } else {
+                "···> ".to_string()
+            };
             let prompt = DefaultPrompt::new(
-                DefaultPromptSegment::Basic(rendered.left),
-                if rendered.right.is_empty() {
-                    DefaultPromptSegment::Empty
-                } else {
+                DefaultPromptSegment::Basic(prompt_left),
+                if pending.is_empty() && !rendered.right.is_empty() {
                     DefaultPromptSegment::Basic(rendered.right)
+                } else {
+                    DefaultPromptSegment::Empty
                 },
             );
 
-            let trimmed = match line_editor.read_line(&prompt) {
-                Ok(Signal::Success(line)) => line.trim().to_string(),
+            let line = match line_editor.read_line(&prompt) {
+                Ok(Signal::Success(line)) => line,
                 Ok(Signal::CtrlD) => break,
                 Ok(Signal::CtrlC) => {
                     self.last_exit_code = 130;
+                    pending.clear();
                     continue;
                 }
                 Err(err) => {
@@ -140,13 +147,30 @@ impl Shell {
                     continue;
                 }
             };
-            if trimmed.is_empty() {
+
+            let current_line = line.trim_end().to_string();
+            if pending.is_empty() && current_line.trim().is_empty() {
                 continue;
             }
 
-            let _highlighted = self.highlighter.highlight_line(&trimmed);
+            if !pending.is_empty() {
+                pending.push('\n');
+            }
+            pending.push_str(&current_line);
 
-            match self.execute_line(&trimmed) {
+            if !is_input_complete(&pending) {
+                continue;
+            }
+
+            let exec = pending.trim().to_string();
+            pending.clear();
+            if exec.is_empty() {
+                continue;
+            }
+
+            let _highlighted = self.highlighter.highlight_line(&exec);
+
+            match self.execute_line(&exec) {
                 Ok(outcome) => {
                     self.last_exit_code = outcome.exit_code;
                     if outcome.should_exit {
@@ -252,6 +276,50 @@ impl Shell {
             for item in suggestions {
                 println!("{}\t{}", item.value, item.description.unwrap_or_default());
             }
+            return Some(RuntimeOutcome::ok());
+        }
+
+        if trimmed == "completion list" {
+            for rule in self.completion.list_rules() {
+                println!("{rule}");
+            }
+            return Some(RuntimeOutcome::ok());
+        }
+
+        if let Some(cmd) = trimmed.strip_prefix("completion show ") {
+            for rule in self.completion.show_rules_for(cmd.trim()) {
+                println!("{rule}");
+            }
+            return Some(RuntimeOutcome::ok());
+        }
+
+        if trimmed == "completion reload" {
+            self.completion.reload();
+            println!("completion reloaded");
+            return Some(RuntimeOutcome::ok());
+        }
+
+        if trimmed == "completion doctor" {
+            let count = self.completion.list_rules().len();
+            println!("completion rules loaded: {count}");
+            if let Ok(paths) = DoshPaths::detect() {
+                println!(
+                    "commands_dir={} exists={}",
+                    paths.commands_dir().display(),
+                    paths.commands_dir().exists()
+                );
+                println!(
+                    "completions_dir={} exists={}",
+                    paths.completions_dir().display(),
+                    paths.completions_dir().exists()
+                );
+                println!(
+                    "modules_dir={} exists={}",
+                    paths.modules_dir().display(),
+                    paths.modules_dir().exists()
+                );
+            }
+            println!("status: ok");
             return Some(RuntimeOutcome::ok());
         }
 
@@ -417,6 +485,50 @@ impl Default for Shell {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn is_input_complete(input: &str) -> bool {
+    let mut paren = 0i32;
+    let mut brace = 0i32;
+    let mut bracket = 0i32;
+    let mut in_quote: Option<char> = None;
+    let mut escaped = false;
+
+    for ch in input.chars() {
+        if let Some(q) = in_quote {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if ch == '\\' {
+                escaped = true;
+                continue;
+            }
+            if ch == q {
+                in_quote = None;
+            }
+            continue;
+        }
+        match ch {
+            '"' | '\'' => in_quote = Some(ch),
+            '(' => paren += 1,
+            ')' => paren -= 1,
+            '{' => brace += 1,
+            '}' => brace -= 1,
+            '[' => bracket += 1,
+            ']' => bracket -= 1,
+            _ => {}
+        }
+    }
+
+    if in_quote.is_some() || paren > 0 || brace > 0 || bracket > 0 {
+        return false;
+    }
+    let tail = input.trim_end();
+    if tail.ends_with('|') || tail.ends_with("&&") || tail.ends_with("||") {
+        return false;
+    }
+    true
 }
 
 #[cfg(test)]

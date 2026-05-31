@@ -1,11 +1,14 @@
 mod context;
 mod model;
 mod path_commands;
+mod providers;
 mod rules;
+mod script_provider;
 
 use context::CompletionContext;
 pub use model::CompletionItem;
 use path_commands::{collect_path_commands, normalize_command_name};
+use providers::context_aware_completions;
 use rules::CompletionRulesStore;
 
 use dosh_builtins::BuiltinRegistry;
@@ -44,14 +47,28 @@ impl CompletionEngine {
         let ctx = CompletionContext::from_input(input, env_ctx.cwd().display().to_string());
 
         if let Some(mut rule_items) = self.rules.complete(&ctx) {
-            rule_items.retain(|i| i.value.starts_with(&ctx.current));
+            sort_items(&mut rule_items, &ctx.current);
             rule_items.truncate(40);
             if !rule_items.is_empty() {
                 return rule_items;
             }
         }
 
-        let prefix = input.trim();
+        let mut contextual = context_aware_completions(&ctx);
+        contextual.retain(|i| value_matches(&i.value, &ctx.current));
+        sort_items(&mut contextual, &ctx.current);
+        if !contextual.is_empty() {
+            contextual.truncate(40);
+            return contextual;
+        }
+
+        let is_command_position =
+            !input.chars().last().is_some_and(|c| c.is_whitespace()) && ctx.words.len() <= 1;
+        if !is_command_position {
+            return Vec::new();
+        }
+
+        let prefix = ctx.current.as_str();
         if prefix.is_empty() {
             return Vec::new();
         }
@@ -73,10 +90,7 @@ impl CompletionEngine {
 
         for cmd in self.rules.custom_commands() {
             if cmd.starts_with(prefix) && seen.insert(cmd.clone()) {
-                items.push(CompletionItem::new(
-                    cmd.to_string(),
-                    Some("custom".to_string()),
-                ));
+                items.push(CompletionItem::new(cmd, Some("custom".to_string())));
             }
         }
 
@@ -94,6 +108,7 @@ impl CompletionEngine {
             }
         }
 
+        sort_items(&mut items, prefix);
         items.truncate(20);
         items
     }
@@ -107,10 +122,60 @@ impl CompletionEngine {
             all.insert(cmd.to_string());
         }
         for cmd in self.rules.custom_commands() {
-            all.insert(cmd.to_string());
+            all.insert(cmd);
         }
         all.into_iter().collect()
     }
+
+    pub fn reload(&self) {
+        self.rules.reload();
+    }
+
+    pub fn list_rules(&self) -> Vec<String> {
+        self.rules.list_rules()
+    }
+
+    pub fn show_rules_for(&self, command: &str) -> Vec<String> {
+        self.rules.show_rules_for(command)
+    }
+}
+
+fn value_matches(value: &str, needle: &str) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    let v = value.to_ascii_lowercase();
+    let n = needle.to_ascii_lowercase();
+    v.starts_with(&n) || fuzzy_contains(&v, &n)
+}
+
+fn fuzzy_contains(value: &str, needle: &str) -> bool {
+    let mut it = value.chars();
+    for ch in needle.chars() {
+        if !it.any(|c| c == ch) {
+            return false;
+        }
+    }
+    true
+}
+
+fn sort_items(items: &mut [CompletionItem], needle: &str) {
+    let n = needle.to_ascii_lowercase();
+    items.sort_by(|a, b| {
+        let ap = a.priority.unwrap_or(0);
+        let bp = b.priority.unwrap_or(0);
+        let av = a.value.to_ascii_lowercase();
+        let bv = b.value.to_ascii_lowercase();
+        let a_exact = av == n;
+        let b_exact = bv == n;
+        let a_prefix = av.starts_with(&n);
+        let b_prefix = bv.starts_with(&n);
+        b_exact
+            .cmp(&a_exact)
+            .then_with(|| b_prefix.cmp(&a_prefix))
+            .then_with(|| bp.cmp(&ap))
+            .then_with(|| av.cmp(&bv))
+    });
 }
 
 pub fn command_name_from_path(path: &std::path::Path) -> Option<String> {
@@ -139,6 +204,7 @@ pub fn load_custom_command_names() -> Vec<String> {
 mod tests {
     use super::*;
     use crate::rules::RuleTarget;
+    use dosh_env::EnvContext;
 
     #[test]
     fn command_name_normalize() {
@@ -159,5 +225,20 @@ mod tests {
         let target = RuleTarget::Arg(2);
         assert!(target.matches(2, false, None, ""));
         assert!(!target.matches(1, false, None, ""));
+    }
+
+    #[test]
+    fn no_duplicate_command_completion_after_space() {
+        let engine = CompletionEngine::new();
+        let env = EnvContext::new(std::env::current_dir().unwrap());
+        let out = engine.complete("devflow ", &env);
+        assert!(out.is_empty(), "should not suggest command name again");
+    }
+
+    #[test]
+    fn completion_uses_segment_after_last_pipe() {
+        let ctx = CompletionContext::from_input("ls | devflow t", ".".into());
+        assert_eq!(ctx.command, "devflow");
+        assert_eq!(ctx.current, "t");
     }
 }

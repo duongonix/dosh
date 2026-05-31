@@ -926,4 +926,22 @@ mod tests {
         let out = runtime.execute(&script, &mut env).unwrap();
         assert_eq!(out.exit_code, 0);
     }
+
+    #[test]
+    fn runtime_pipeline_interpolates_home_in_save_path() {
+        let runtime = Runtime::new();
+        let mut env = EnvContext::new(std::env::current_dir().unwrap());
+        let tmp = std::env::temp_dir().join(format!("dosh_home_interp_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&tmp);
+        let home = tmp.to_string_lossy().replace('\\', "/");
+        let out_file = format!("{home}/interp.txt");
+        let script = Parser::new()
+            .parse_script(&format!(
+                "$homex = \"{home}\"\n\"ok\" | save \"$homex/interp.txt\""
+            ))
+            .unwrap();
+        let out = runtime.execute(&script, &mut env).unwrap();
+        assert_eq!(out.exit_code, 0);
+        assert!(std::path::Path::new(&out_file).exists());
+    }
 }

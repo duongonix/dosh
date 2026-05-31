@@ -55,6 +55,11 @@ impl Parser {
         if let Some(pipeline) = parse_pipeline_with_literal_source(line)? {
             return Ok(Statement::Pipeline(pipeline));
         }
+        if let Ok(expr) = parse_expression_result(line)
+            && is_literal_expr(&expr)
+        {
+            return Ok(Statement::Expr(expr));
+        }
         if line.starts_with('{') {
             let (inner, tail) = parse_block_and_tail(line)?;
             if !tail.trim().is_empty() {
@@ -416,23 +421,44 @@ fn parse_pipeline_with_literal_source(line: &str) -> Result<Option<Pipeline>> {
 
 fn split_first_pipeline_segment(line: &str) -> Option<(&str, &str)> {
     let mut in_string = false;
+    let mut in_here_single = false;
     let mut escaped = false;
     let mut depth_paren = 0i32;
     let mut depth_brace = 0i32;
     let mut depth_bracket = 0i32;
-    for (idx, ch) in line.char_indices() {
+    let mut i = 0usize;
+    while i < line.len() {
+        if in_here_single {
+            if line[i..].starts_with("'@") {
+                in_here_single = false;
+                i += 2;
+                continue;
+            }
+            i += line[i..].chars().next().map(char::len_utf8).unwrap_or(1);
+            continue;
+        }
+        if line[i..].starts_with("@'") {
+            in_here_single = true;
+            i += 2;
+            continue;
+        }
+        let ch = line[i..].chars().next()?;
+        let idx = i;
         if in_string {
             if escaped {
                 escaped = false;
+                i += ch.len_utf8();
                 continue;
             }
             if ch == '\\' {
                 escaped = true;
+                i += ch.len_utf8();
                 continue;
             }
             if ch == '"' {
                 in_string = false;
             }
+            i += ch.len_utf8();
             continue;
         }
         match ch {
@@ -448,6 +474,7 @@ fn split_first_pipeline_segment(line: &str) -> Option<(&str, &str)> {
             }
             _ => {}
         }
+        i += ch.len_utf8();
     }
     None
 }

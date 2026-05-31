@@ -82,7 +82,12 @@ impl Runtime {
         let mut process = ProcessCommand::new(&spawn_name);
         process.args(&cmd.args).current_dir(env.cwd());
         crate::io::apply_redirects(&mut process, &cmd.redirects)?;
-        let status = process.status()?;
+        let status = process.status().map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                return anyhow!(command_not_found_message(&resolved_name, &self.builtins));
+            }
+            anyhow!(e)
+        })?;
 
         Ok(RuntimeOutcome {
             exit_code: status.code().unwrap_or(1),
@@ -216,7 +221,12 @@ impl Runtime {
         let mut process = ProcessCommand::new(&spawn_name);
         process.args(&cmd.args).current_dir(env.cwd());
         crate::io::apply_redirects(&mut process, &cmd.redirects)?;
-        let mut child = process.spawn()?;
+        let mut child = process.spawn().map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                return anyhow!(command_not_found_message(&resolved_name, &self.builtins));
+            }
+            anyhow!(e)
+        })?;
         let pid = child.id();
 
         std::thread::spawn(move || {
@@ -230,6 +240,47 @@ impl Runtime {
             flow: ControlFlow::None,
         })
     }
+}
+
+fn command_not_found_message(name: &str, builtins: &dosh_builtins::BuiltinRegistry) -> String {
+    let mut candidates = builtins
+        .metadata(None)
+        .into_iter()
+        .map(|m| m.name.to_string())
+        .collect::<Vec<_>>();
+    candidates.sort();
+    let mut best: Option<(&str, usize)> = None;
+    for c in &candidates {
+        let d = edit_distance(name, c);
+        if d <= 3 {
+            if let Some((_, best_d)) = best {
+                if d < best_d {
+                    best = Some((c.as_str(), d));
+                }
+            } else {
+                best = Some((c.as_str(), d));
+            }
+        }
+    }
+    if let Some((s, _)) = best {
+        format!("program not found: {name}. did you mean `{s}`?")
+    } else {
+        format!("program not found: {name}")
+    }
+}
+
+fn edit_distance(a: &str, b: &str) -> usize {
+    let mut prev = (0..=b.len()).collect::<Vec<_>>();
+    let mut cur = vec![0usize; b.len() + 1];
+    for (i, ca) in a.chars().enumerate() {
+        cur[0] = i + 1;
+        for (j, cb) in b.chars().enumerate() {
+            let cost = if ca == cb { 0 } else { 1 };
+            cur[j + 1] = (cur[j] + 1).min(prev[j + 1] + 1).min(prev[j] + cost);
+        }
+        std::mem::swap(&mut prev, &mut cur);
+    }
+    prev[b.len()]
 }
 
 fn parse_arg_expr(text: &str) -> Expression {
@@ -396,4 +447,16 @@ fn record_from_snapshot(
         .iter()
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::edit_distance;
+
+    #[test]
+    fn edit_distance_basic() {
+        assert_eq!(edit_distance("help", "help"), 0);
+        assert_eq!(edit_distance("hep", "help"), 1);
+        assert!(edit_distance("xyz", "help") >= 3);
+    }
 }

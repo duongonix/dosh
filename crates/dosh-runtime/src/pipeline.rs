@@ -58,10 +58,17 @@ impl Runtime {
                 });
             }
 
+            let interpolated_name = interpolate_token(&cmd.name, state);
+            let interpolated_args = cmd
+                .args
+                .iter()
+                .map(|a| interpolate_token(a, state))
+                .collect::<Vec<_>>();
+
             let (resolved_name, resolved_args) = self
                 .builtins
-                .expand_alias(&cmd.name, &cmd.args)
-                .unwrap_or_else(|| (cmd.name.clone(), cmd.args.clone()));
+                .expand_alias(&interpolated_name, &interpolated_args)
+                .unwrap_or_else(|| (interpolated_name.clone(), interpolated_args.clone()));
 
             if let Ok(mut plugins) = self.wasm_plugins.lock()
                 && let Some(resp) = plugins.run_command(
@@ -115,7 +122,12 @@ impl Runtime {
             process.stdin(Stdio::piped()).stdout(Stdio::piped());
             crate::io::apply_redirects(&mut process, &cmd.redirects)?;
 
-            let mut child = process.spawn()?;
+            let mut child = process.spawn().map_err(|e| {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    return anyhow::anyhow!("program not found: {exec_name}");
+                }
+                anyhow::anyhow!(e)
+            })?;
             if let Some(stdin) = child.stdin.as_mut() {
                 use std::io::Write;
                 let input_text = stream.data.clone();
@@ -135,6 +147,76 @@ impl Runtime {
             output: crate::io::pipeline_data_to_text(stream.data),
             flow: ControlFlow::None,
         })
+    }
+}
+
+fn interpolate_token(input: &str, state: &RuntimeState) -> String {
+    let mut out = String::new();
+    let chars = input.chars().collect::<Vec<_>>();
+    let mut i = 0usize;
+    while i < chars.len() {
+        if chars[i] == '$' {
+            let mut j = i + 1;
+            while j < chars.len()
+                && (chars[j].is_ascii_alphanumeric() || chars[j] == '_' || chars[j] == '.')
+            {
+                j += 1;
+            }
+            if j > i + 1 {
+                let name = chars[i + 1..j].iter().collect::<String>();
+                if let Some(v) = resolve_variable_path(&name, state) {
+                    out.push_str(&expression_to_arg_string(&v));
+                }
+                i = j;
+                continue;
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
+fn resolve_variable_path(path: &str, state: &RuntimeState) -> Option<Expression> {
+    let mut parts = path.split('.');
+    let root = parts.next()?;
+    let mut value = state.get_var(root)?;
+    for p in parts {
+        value = match value {
+            Expression::Record(fields) => fields.into_iter().find(|(k, _)| k == p)?.1,
+            Expression::List(items) => items.into_iter().nth(p.parse::<usize>().ok()?)?,
+            _ => return None,
+        };
+    }
+    Some(value)
+}
+
+fn expression_to_arg_string(value: &Expression) -> String {
+    match value {
+        Expression::StringLiteral(s) => s.clone(),
+        Expression::Integer(v) => v.to_string(),
+        Expression::Float(v) => v.clone(),
+        Expression::Bool(v) => v.to_string(),
+        Expression::Identifier(v) => v.clone(),
+        Expression::Null => String::new(),
+        Expression::List(items) => {
+            let inner = items
+                .iter()
+                .map(expression_to_arg_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("[{inner}]")
+        }
+        Expression::Record(fields) => {
+            let inner = fields
+                .iter()
+                .map(|(k, v)| format!("{k}: {}", expression_to_arg_string(v)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{{{inner}}}")
+        }
+        Expression::Variable { name, .. } => format!("${name}"),
+        other => format!("{other:?}"),
     }
 }
 

@@ -821,9 +821,12 @@ dependencies = [
 name = "dosh-completion"
 version = "1.0.7"
 dependencies = [
+ "dosh-ast",
  "dosh-builtins",
  "dosh-config",
  "dosh-env",
+ "dosh-parser",
+ "dosh-runtime",
  "serde",
  "shell-words",
 ]

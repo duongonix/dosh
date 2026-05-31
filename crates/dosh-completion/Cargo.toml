@@ -11,3 +11,6 @@ shell-words.workspace = true
 dosh-env = { path = "../dosh-env" }
 dosh-builtins = { path = "../dosh-builtins" }
 dosh-config = { path = "../dosh-config" }
+dosh-parser = { path = "../dosh-parser" }
+dosh-runtime = { path = "../dosh-runtime" }
+dosh-ast = { path = "../dosh-ast" }
