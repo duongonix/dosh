@@ -7,5 +7,7 @@ repository.workspace = true
 
 [dependencies]
 serde.workspace = true
+shell-words.workspace = true
 dosh-env = { path = "../dosh-env" }
 dosh-builtins = { path = "../dosh-builtins" }
+dosh-config = { path = "../dosh-config" }

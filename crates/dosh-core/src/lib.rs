@@ -1,4 +1,5 @@
 mod repl_highlighter;
+mod repl_completer;
 mod ui_error;
 mod update;
 
@@ -12,10 +13,11 @@ use dosh_prompt::PromptEngine;
 use dosh_runtime::{Runtime, RuntimeOutcome};
 use nu_ansi_term::{Color, Style};
 use reedline::{
-    ColumnarMenu, DefaultCompleter, DefaultHinter, DefaultPrompt, DefaultPromptSegment,
-    DefaultValidator, Emacs, FileBackedHistory, KeyCode, KeyModifiers, ListMenu, MenuBuilder,
-    Reedline, ReedlineEvent, ReedlineMenu, Signal, default_emacs_keybindings,
+    ColumnarMenu, DefaultHinter, DefaultPrompt, DefaultPromptSegment, DefaultValidator, Emacs,
+    FileBackedHistory, KeyCode, KeyModifiers, ListMenu, MenuBuilder, Reedline, ReedlineEvent,
+    ReedlineMenu, Signal, default_emacs_keybindings,
 };
+use repl_completer::DoshReedlineCompleter;
 use repl_highlighter::DoshReedlineHighlighter;
 use std::io::Write;
 use std::path::PathBuf;
@@ -322,8 +324,10 @@ impl Shell {
         let history_path = reedline_history_path();
         let history = Box::new(FileBackedHistory::with_file(2_000, history_path)?);
 
-        let commands = self.completion.candidate_words();
-        let completer = Box::new(DefaultCompleter::new_with_wordlen(commands, 2));
+        let completer = Box::new(DoshReedlineCompleter::new(
+            CompletionEngine::new(),
+            self.env.cwd().to_path_buf(),
+        ));
         let completion_menu = Box::new(ColumnarMenu::default().with_name("completion_menu"));
         let history_menu = Box::new(ListMenu::default().with_name("history_menu"));
 

@@ -12,7 +12,7 @@ impl Highlighter {
         .any(|cmd| trimmed == *cmd || trimmed.starts_with(&format!("{cmd} ")));
         let keyword = [
             "fn ", "if ", "else", "for ", "match ", "return", "break", "continue", "use ",
-            "export ", "module ", "test ",
+            "export ", "module ", "mod ", "test ",
         ]
         .iter()
         .any(|kw| trimmed.starts_with(kw));

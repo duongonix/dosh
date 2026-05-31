@@ -822,8 +822,10 @@ name = "dosh-completion"
 version = "1.0.6"
 dependencies = [
  "dosh-builtins",
+ "dosh-config",
  "dosh-env",
  "serde",
+ "shell-words",
 ]
 
 [[package]]

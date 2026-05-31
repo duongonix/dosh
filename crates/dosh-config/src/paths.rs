@@ -66,6 +66,18 @@ impl DoshPaths {
         self.user_config_root.join("plugins")
     }
 
+    pub fn commands_dir(&self) -> PathBuf {
+        self.user_config_root.join("commands")
+    }
+
+    pub fn completions_dir(&self) -> PathBuf {
+        self.user_config_root.join("completions")
+    }
+
+    pub fn modules_dir(&self) -> PathBuf {
+        self.user_config_root.join("modules")
+    }
+
     pub fn configs_dir(&self) -> PathBuf {
         self.path_for(SharedPathKind::Configs)
     }

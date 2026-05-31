@@ -93,6 +93,9 @@ impl Parser {
         if let Some(rest) = line.strip_prefix("module ") {
             return self.parse_module_statement(rest);
         }
+        if let Some(rest) = line.strip_prefix("mod ") {
+            return self.parse_module_statement(rest);
+        }
 
         if let Some(rest) = line.strip_prefix("use ") {
             let (module, alias) = parse_import_clause(rest.trim())?;

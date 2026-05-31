@@ -112,6 +112,19 @@ mod tests {
     }
 
     #[test]
+    fn parse_mod_alias_for_module_statement() {
+        let parser = Parser::new();
+        let source = r#"
+            mod util { fn foo() { echo ok } }
+            use util
+        "#;
+        let script = parser.parse_script(source).unwrap();
+        assert_eq!(script.statements.len(), 2);
+        assert!(matches!(script.statements[0], Statement::Module { .. }));
+        assert!(matches!(script.statements[1], Statement::Import { .. }));
+    }
+
+    #[test]
     fn parse_dollar_assignment_and_constant() {
         let parser = Parser::new();
         let script = parser

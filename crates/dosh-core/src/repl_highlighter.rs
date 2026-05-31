@@ -111,6 +111,7 @@ fn is_known_command(token: &str, known: &HashSet<String>) -> bool {
         || token == "let"
         || token == "fn"
         || token == "module"
+        || token == "mod"
         || token == "import"
 }
 
