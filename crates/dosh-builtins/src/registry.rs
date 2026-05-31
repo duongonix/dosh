@@ -235,7 +235,7 @@ pub(super) fn to_rows(value: Value) -> Vec<Record> {
 
 pub(super) fn history_file_path() -> PathBuf {
     if let Ok(paths) = DoshPaths::detect() {
-        return paths.cache_dir().join("reedline.history");
+        return paths.history_text_file();
     }
     PathBuf::from(".dosh_reedline.history")
 }

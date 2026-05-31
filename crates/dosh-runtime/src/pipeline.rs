@@ -109,7 +109,8 @@ impl Runtime {
             } else {
                 resolved_name.clone()
             };
-            let mut process = ProcessCommand::new(&exec_name);
+            let spawn_name = crate::external::resolve_program_for_spawn(&exec_name);
+            let mut process = ProcessCommand::new(&spawn_name);
             process.args(&resolved_args).current_dir(env.cwd());
             process.stdin(Stdio::piped()).stdout(Stdio::piped());
             crate::io::apply_redirects(&mut process, &cmd.redirects)?;

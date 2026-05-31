@@ -74,6 +74,20 @@ impl DoshPaths {
         self.path_for(SharedPathKind::Cache)
     }
 
+    pub fn user_cache_dir(&self) -> PathBuf {
+        self.user_config_root.join("cache")
+    }
+
+    pub fn writable_cache_dir(&self) -> PathBuf {
+        let primary = self.cache_dir();
+        if is_dir_writable(&primary) {
+            return primary;
+        }
+        let fallback = self.user_cache_dir();
+        let _ = std::fs::create_dir_all(&fallback);
+        fallback
+    }
+
     pub fn logs_dir(&self) -> PathBuf {
         self.path_for(SharedPathKind::Logs)
     }
@@ -99,7 +113,30 @@ impl DoshPaths {
     }
 
     pub fn history_db_file(&self) -> PathBuf {
-        self.cache_dir().join("history.sqlite3")
+        self.writable_cache_dir().join("history.sqlite3")
+    }
+
+    pub fn history_text_file(&self) -> PathBuf {
+        self.writable_cache_dir().join("reedline.history")
+    }
+}
+
+fn is_dir_writable(dir: &Path) -> bool {
+    if std::fs::create_dir_all(dir).is_err() {
+        return false;
+    }
+    let probe = dir.join(".dosh_write_probe");
+    match std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&probe)
+    {
+        Ok(_) => {
+            let _ = std::fs::remove_file(probe);
+            true
+        }
+        Err(_) => false,
     }
 }
 

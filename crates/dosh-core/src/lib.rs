@@ -17,6 +17,7 @@ use reedline::{
 };
 use repl_highlighter::DoshReedlineHighlighter;
 use std::path::PathBuf;
+use std::io::Write;
 use std::time::Instant;
 use ui_error::format_error_report;
 
@@ -160,6 +161,7 @@ impl Shell {
     fn execute_line(&mut self, line: &str) -> ShellResult<RuntimeOutcome> {
         let started = Instant::now();
         let _ = self.history.add(line);
+        let _ = append_reedline_history_entry(line);
 
         if let Some(outcome) = self.run_prompt_meta_commands(line) {
             self.last_exit_code = outcome.exit_code;
@@ -350,6 +352,23 @@ impl Shell {
     }
 }
 
+fn append_reedline_history_entry(line: &str) -> ShellResult {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return Ok(());
+    }
+    let path = reedline_history_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    writeln!(file, "{trimmed}")?;
+    Ok(())
+}
+
 fn default_shell_env(start_path: Option<PathBuf>) -> EnvContext {
     if let Some(path) = start_path.filter(|p| p.exists() && p.is_dir()) {
         return EnvContext::new(path);
@@ -359,7 +378,7 @@ fn default_shell_env(start_path: Option<PathBuf>) -> EnvContext {
 
 fn init_history_store() -> HistoryStore {
     if let Ok(paths) = DoshPaths::detect() {
-        let db_path = paths.cache_dir().join("history.sqlite3");
+        let db_path = paths.history_db_file();
         if let Ok(store) = HistoryStore::new_persistent(&db_path) {
             return store;
         }
@@ -370,7 +389,7 @@ fn init_history_store() -> HistoryStore {
 
 fn reedline_history_path() -> PathBuf {
     if let Ok(paths) = DoshPaths::detect() {
-        let path = paths.cache_dir().join("reedline.history");
+        let path = paths.history_text_file();
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }

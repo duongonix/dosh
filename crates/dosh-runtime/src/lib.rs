@@ -1,4 +1,5 @@
 mod commands;
+mod external;
 mod io;
 mod model;
 mod pipeline;

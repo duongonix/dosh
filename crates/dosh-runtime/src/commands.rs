@@ -78,7 +78,8 @@ impl Runtime {
         }
 
         let resolved_name = resolve_command_name(&cmd, state)?;
-        let mut process = ProcessCommand::new(&resolved_name);
+        let spawn_name = crate::external::resolve_program_for_spawn(&resolved_name);
+        let mut process = ProcessCommand::new(&spawn_name);
         process.args(&cmd.args).current_dir(env.cwd());
         crate::io::apply_redirects(&mut process, &cmd.redirects)?;
         let status = process.status()?;
@@ -211,7 +212,8 @@ impl Runtime {
         }
 
         let resolved_name = resolve_command_name(cmd, state)?;
-        let mut process = ProcessCommand::new(&resolved_name);
+        let spawn_name = crate::external::resolve_program_for_spawn(&resolved_name);
+        let mut process = ProcessCommand::new(&spawn_name);
         process.args(&cmd.args).current_dir(env.cwd());
         crate::io::apply_redirects(&mut process, &cmd.redirects)?;
         let mut child = process.spawn()?;
