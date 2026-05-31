@@ -43,6 +43,7 @@ done < <(find . -name Cargo.toml -not -path "*/target/*" -not -path "*/.git/*" -
 echo "==> Running checks"
 cargo fmt
 cargo check --workspace
+cargo build --workspace
 cargo test --workspace
 
 echo "==> Committing release changes"

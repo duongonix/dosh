@@ -43,15 +43,33 @@ $cargoTomls = Get-ChildItem -Path $repoRoot -Recurse -Filter Cargo.toml -File |
   Where-Object { $_.FullName -notmatch '\\target\\' -and $_.FullName -notmatch '\\.git\\' }
 
 foreach ($file in $cargoTomls) {
-  $content = Get-Content -LiteralPath $file.FullName -Raw
-  $updated = [regex]::Replace(
-    $content,
-    '(?ms)(^\s*\[package\]\s*.*?^\s*version\s*=\s*")([^"]+)(")',
-    ('$1' + $version + '$3'),
-    1
-  )
-  if ($updated -ne $content) {
-    Set-Content -LiteralPath $file.FullName -Value $updated -NoNewline
+  $lines = Get-Content -LiteralPath $file.FullName
+  $pkgIdx = -1
+  $verIdx = -1
+  for ($i = 0; $i -lt $lines.Count; $i++) {
+    if ($lines[$i] -match '^\s*\[package\]\s*$') {
+      $pkgIdx = $i
+      break
+    }
+  }
+  if ($pkgIdx -lt 0) {
+    Fail "invalid Cargo.toml (missing [package]): $($file.FullName)"
+  }
+  for ($j = $pkgIdx + 1; $j -lt $lines.Count; $j++) {
+    if ($lines[$j] -match '^\s*\[') { break }
+    if ($lines[$j] -match '^\s*version\s*=\s*".*"\s*$') {
+      $verIdx = $j
+      break
+    }
+  }
+  if ($verIdx -lt 0) {
+    Fail "invalid Cargo.toml (missing package version): $($file.FullName)"
+  }
+
+  $newLine = 'version = "' + $version + '"'
+  if ($lines[$verIdx] -ne $newLine) {
+    $lines[$verIdx] = $newLine
+    Set-Content -LiteralPath $file.FullName -Value $lines
     Write-Host "  updated: $($file.FullName)"
   }
 }
@@ -60,6 +78,7 @@ if (-not $SkipChecks) {
   Write-Host "==> Running checks"
   cargo fmt
   cargo check --workspace
+  cargo build --workspace
   cargo test --workspace
 }
 
@@ -79,4 +98,3 @@ git push $Remote $Tag
 Write-Host ""
 Write-Host "Release tag pushed: $Tag"
 Write-Host "GitHub release workflow should start automatically."
-

@@ -1,4 +1,6 @@
-$11.0.4"
+[package]
+name = "dosh-builtins"
+version = "1.0.4"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
