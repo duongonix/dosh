@@ -8,7 +8,7 @@ repository.workspace = true
 [dependencies]
 anyhow.workspace = true
 semver = "1"
-ureq = "2"
+dosh-updater = { path = "../dosh-updater" }
 dosh-parser = { path = "../dosh-parser" }
 dosh-runtime = { path = "../dosh-runtime" }
 dosh-env = { path = "../dosh-env" }

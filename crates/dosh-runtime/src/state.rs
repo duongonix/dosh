@@ -10,7 +10,7 @@ pub(crate) struct FunctionDef {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct RuntimeState {
+pub struct RuntimeState {
     pub(crate) scopes: Vec<BTreeMap<String, Expression>>,
     pub(crate) functions: BTreeMap<String, FunctionDef>,
     pub(crate) modules: BTreeMap<String, Vec<Statement>>,
@@ -21,7 +21,7 @@ pub(crate) struct RuntimeState {
 }
 
 impl RuntimeState {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             scopes: vec![BTreeMap::new()],
             functions: BTreeMap::new(),

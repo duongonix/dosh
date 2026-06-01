@@ -13,9 +13,9 @@ use dosh_prompt::PromptEngine;
 use dosh_runtime::{Runtime, RuntimeOutcome};
 use nu_ansi_term::{Color, Style};
 use reedline::{
-    ColumnarMenu, DefaultHinter, DefaultPrompt, DefaultPromptSegment, DefaultValidator, Emacs,
-    FileBackedHistory, KeyCode, KeyModifiers, ListMenu, MenuBuilder, Reedline, ReedlineEvent,
-    ReedlineMenu, Signal, default_emacs_keybindings,
+    ColumnarMenu, DefaultHinter, DefaultPrompt, DefaultPromptSegment, DefaultValidator,
+    EditCommand, Emacs, FileBackedHistory, KeyCode, KeyModifiers, ListMenu, MenuBuilder, Reedline,
+    ReedlineEvent, ReedlineMenu, Signal, default_emacs_keybindings,
 };
 use repl_completer::DoshReedlineCompleter;
 use repl_highlighter::DoshReedlineHighlighter;
@@ -53,6 +53,7 @@ pub struct Shell {
     config: ShellConfig,
     parser: Parser,
     runtime: Runtime,
+    runtime_state: Option<dosh_runtime::RuntimeState>,
     env: EnvContext,
     history: HistoryStore,
     completion: CompletionEngine,
@@ -74,6 +75,7 @@ impl Shell {
             config,
             parser: Parser::new(),
             runtime: Runtime::new(),
+            runtime_state: None,
             env,
             history: init_history_store(),
             completion: CompletionEngine::new(),
@@ -88,7 +90,7 @@ impl Shell {
     pub fn run(&mut self) -> ShellResult {
         self.initialize_session()?;
         if self.config.interactive && self.config.command.is_none() {
-            let _ = update::check_and_prompt_update(true);
+            let _ = update::check_and_prompt_update(true, true);
         }
         if let Some(command) = self.config.command.clone() {
             self.execute_line(&command)?;
@@ -148,44 +150,50 @@ impl Shell {
                 }
             };
 
-            let current_line = line.trim_end().to_string();
-            if pending.is_empty() && current_line.trim().is_empty() {
-                continue;
-            }
-
-            if !pending.is_empty() {
-                pending.push('\n');
-            }
-            pending.push_str(&current_line);
-
-            if !is_input_complete(&pending) {
-                continue;
-            }
-
-            let exec = pending.trim().to_string();
-            pending.clear();
-            if exec.is_empty() {
-                continue;
-            }
-
-            let _highlighted = self.highlighter.highlight_line(&exec);
-
-            match self.execute_line(&exec) {
-                Ok(outcome) => {
-                    self.last_exit_code = outcome.exit_code;
-                    if outcome.should_exit {
-                        break;
-                    }
-                }
-                Err(err) => {
-                    self.last_exit_code = 1;
-                    eprintln!("{}", format_error_report(&err));
-                    continue;
-                }
+            let chunk = line.replace("\r\n", "\n");
+            if self.process_input_chunk(&chunk, &mut pending)? {
+                break;
             }
         }
 
         Ok(())
+    }
+
+    fn process_input_chunk(&mut self, chunk: &str, pending: &mut String) -> ShellResult<bool> {
+        let normalized = chunk.replace("\r\n", "\n");
+        if pending.is_empty() && normalized.trim().is_empty() {
+            return Ok(false);
+        }
+
+        if !pending.is_empty() {
+            pending.push('\n');
+        }
+        pending.push_str(normalized.trim_end());
+
+        if !is_input_complete(pending) {
+            return Ok(false);
+        }
+
+        let exec = pending.trim().to_string();
+        pending.clear();
+        if exec.is_empty() {
+            return Ok(false);
+        }
+
+        let _highlighted = self.highlighter.highlight_line(&exec);
+        match self.execute_line(&exec) {
+            Ok(outcome) => {
+                self.last_exit_code = outcome.exit_code;
+                if outcome.should_exit {
+                    return Ok(true);
+                }
+            }
+            Err(err) => {
+                self.last_exit_code = 1;
+                eprintln!("{}", format_error_report(&err));
+            }
+        }
+        Ok(false)
     }
 
     fn execute_line(&mut self, line: &str) -> ShellResult<RuntimeOutcome> {
@@ -203,8 +211,22 @@ impl Shell {
             return Ok(outcome);
         }
 
-        let script = self.parser.parse_line(line)?;
-        let outcome = self.runtime.execute(&script, &mut self.env)?;
+        let normalized = normalize_multiline_pipeline(line);
+        let script = if normalized.contains('\n') {
+            self.parser.parse_script(&normalized)?
+        } else {
+            self.parser.parse_line(&normalized)?
+        };
+        if self.runtime_state.is_none() {
+            self.runtime_state = Some(self.runtime.new_state(&self.env)?);
+        }
+        let outcome = self.runtime.execute_with_state(
+            &script,
+            &mut self.env,
+            self.runtime_state
+                .as_mut()
+                .expect("runtime state initialized"),
+        )?;
 
         if let Some(out) = &outcome.output {
             println!("{out}");
@@ -413,9 +435,20 @@ impl Shell {
             KeyCode::Char('r'),
             ReedlineEvent::Menu("history_menu".to_string()),
         );
+        keybindings.add_binding(
+            KeyModifiers::SHIFT,
+            KeyCode::Enter,
+            ReedlineEvent::Edit(vec![EditCommand::InsertNewline]),
+        );
+        keybindings.add_binding(
+            KeyModifiers::ALT,
+            KeyCode::Enter,
+            ReedlineEvent::Edit(vec![EditCommand::InsertNewline]),
+        );
         let edit_mode = Box::new(Emacs::new(keybindings));
 
         let editor = Reedline::create()
+            .use_bracketed_paste(false)
             .with_history(history)
             .with_completer(completer)
             .with_menu(ReedlineMenu::EngineCompleter(completion_menu))
@@ -433,6 +466,36 @@ impl Shell {
 
         Ok(editor)
     }
+}
+
+fn normalize_multiline_pipeline(input: &str) -> String {
+    let mut out = String::new();
+    for raw in input.replace("\r\n", "\n").lines() {
+        let line = raw.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if out.is_empty() {
+            out.push_str(line);
+            continue;
+        }
+        if out.trim_end().ends_with('|') || line.starts_with('|') {
+            if !out.trim_end().ends_with('|') {
+                if !out.ends_with(' ') {
+                    out.push(' ');
+                }
+                out.push('|');
+            }
+            if !out.ends_with(' ') {
+                out.push(' ');
+            }
+            out.push_str(line.trim_start_matches('|').trim_start());
+        } else {
+            out.push('\n');
+            out.push_str(line);
+        }
+    }
+    out
 }
 
 fn append_reedline_history_entry(line: &str) -> ShellResult {
@@ -485,6 +548,10 @@ impl Default for Shell {
     fn default() -> Self {
         Self::new()
     }
+}
+
+pub fn run_update_command() -> anyhow::Result<()> {
+    update::run_update_command()
 }
 
 fn is_input_complete(input: &str) -> bool {
@@ -552,5 +619,13 @@ mod tests {
             safe_mode: true,
         });
         assert!(shell.run().is_ok());
+    }
+
+    #[test]
+    fn normalize_multiline_pipeline_supports_both_styles() {
+        let a = "ls |\nwhere type == file";
+        let b = "ls\n| where type == file";
+        assert_eq!(normalize_multiline_pipeline(a), "ls | where type == file");
+        assert_eq!(normalize_multiline_pipeline(b), "ls | where type == file");
     }
 }

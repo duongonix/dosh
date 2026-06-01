@@ -166,6 +166,9 @@ fn interpolate_token(input: &str, state: &RuntimeState) -> String {
                 let name = chars[i + 1..j].iter().collect::<String>();
                 if let Some(v) = resolve_variable_path(&name, state) {
                     out.push_str(&expression_to_arg_string(&v));
+                } else {
+                    out.push('$');
+                    out.push_str(&name);
                 }
                 i = j;
                 continue;

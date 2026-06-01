@@ -25,7 +25,8 @@ members = [
   "crates/dosh-dedit",
   "crates/durl-core",
   "crates/dosh-durl",
-  "crates/durl-cli"
+  "crates/durl-cli",
+  "crates/dosh-updater"
 ]
 
 [workspace.package]

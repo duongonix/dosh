@@ -1,0 +1,25 @@
+[package]
+name = "dosh-updater"
+version = "1.0.8"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+reqwest = { version = "0.12", features = ["json", "stream", "blocking", "rustls-tls"] }
+semver = "1"
+indicatif = "0.17"
+sha2 = "0.10"
+zip = "2"
+tar = "0.4"
+flate2 = "1"
+tempfile = "3"
+self-replace = "1"
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3"

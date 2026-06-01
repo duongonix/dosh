@@ -34,6 +34,7 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    Update,
     Run {
         script: PathBuf,
     },
@@ -170,6 +171,7 @@ ________               .__      _________.__           .__  .__
 
 fn run_subcommand(cmd: Commands) -> Result<()> {
     match cmd {
+        Commands::Update => dosh_core::run_update_command(),
         Commands::Run { script } => {
             let content = std::fs::read_to_string(&script)?;
             let mut shell = dosh_core::Shell::with_config(dosh_core::ShellConfig {

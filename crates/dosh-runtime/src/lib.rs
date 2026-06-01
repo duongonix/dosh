@@ -4,6 +4,7 @@ mod io;
 mod model;
 mod pipeline;
 mod state;
+pub use state::RuntimeState;
 
 use anyhow::Result;
 use dosh_ast::{BinaryOp, CellPathSegment, Expression, Script, Statement, TypeExpr, UnaryOp};
@@ -12,7 +13,7 @@ use dosh_config::DoshPaths;
 use dosh_env::EnvContext;
 use dosh_plugin::{PermissionPolicy, TrustPolicy, TrustStore};
 use dosh_wasm::WasmPluginRuntime;
-use state::{FunctionDef, RuntimeState, evaluate_truthy, pattern_matches};
+use state::{FunctionDef, evaluate_truthy, pattern_matches};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -100,7 +101,23 @@ impl Runtime {
     pub fn execute(&self, script: &Script, env: &mut EnvContext) -> Result<RuntimeOutcome> {
         let mut state = RuntimeState::new();
         self.seed_global_vars(env, &mut state)?;
-        let out = self.execute_statements(&script.statements, env, &mut state)?;
+        let out = self.execute_with_state(script, env, &mut state)?;
+        Ok(out)
+    }
+
+    pub fn new_state(&self, env: &EnvContext) -> Result<RuntimeState> {
+        let mut state = RuntimeState::new();
+        self.seed_global_vars(env, &mut state)?;
+        Ok(state)
+    }
+
+    pub fn execute_with_state(
+        &self,
+        script: &Script,
+        env: &mut EnvContext,
+        state: &mut RuntimeState,
+    ) -> Result<RuntimeOutcome> {
+        let out = self.execute_statements(&script.statements, env, state)?;
         match out.flow {
             ControlFlow::Return(_) => anyhow::bail!("Return outside function"),
             ControlFlow::Break => anyhow::bail!("Break outside loop"),
@@ -943,5 +960,34 @@ mod tests {
         let out = runtime.execute(&script, &mut env).unwrap();
         assert_eq!(out.exit_code, 0);
         assert!(std::path::Path::new(&out_file).exists());
+    }
+
+    #[test]
+    fn runtime_state_persists_between_exec_calls() {
+        let runtime = Runtime::new();
+        let mut env = EnvContext::new(std::env::current_dir().expect("cwd"));
+        let mut state = runtime.new_state(&env).expect("new state");
+        let s1 = Parser::new().parse_script("$a = 2").expect("parse 1");
+        let s2 = Parser::new().parse_script("print $a").expect("parse 2");
+        let _ = runtime
+            .execute_with_state(&s1, &mut env, &mut state)
+            .expect("exec 1");
+        let out = runtime
+            .execute_with_state(&s2, &mut env, &mut state)
+            .expect("exec 2");
+        assert_eq!(out.exit_code, 0);
+    }
+
+    #[test]
+    fn runtime_pipeline_closure_ops_do_not_strip_it_acc_vars() {
+        let runtime = Runtime::new();
+        let mut env = EnvContext::new(std::env::current_dir().expect("cwd"));
+        let script = Parser::new()
+            .parse_script(
+                "[1,2,3,4] | filter { $it > 2 }\n[1,2,3] | map { $it * 2 }\n[1,2,3] | reduce 0 { $acc + $it }",
+            )
+            .expect("parse");
+        let out = runtime.execute(&script, &mut env).expect("execute");
+        assert_eq!(out.exit_code, 0);
     }
 }

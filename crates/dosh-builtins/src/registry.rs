@@ -16,6 +16,7 @@ mod fs_builtins;
 mod math_builtins;
 mod network_builtins;
 mod process_builtins;
+mod rm_engine;
 mod structured_builtins;
 mod system_info_builtins;
 mod text_builtins;

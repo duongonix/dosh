@@ -1,10 +1,13 @@
 use super::*;
 use crate::helpers::{copy_dir_recursive, resolve_path};
+use crate::registry::rm_engine::{
+    DeleteSummary, RmMode, RmOptions, detect_fast_candidate, dry_run_record, execute_delete,
+    reject_protected_path, scan_path,
+};
 use crate::registry::{factory, simple_builtin};
 use crate::render::{TableRenderOptions, render_value_as_table};
 use anyhow::{anyhow, bail};
 use chrono::{DateTime, Local};
-use dosh_config::DoshPaths;
 use globset::{Glob, GlobMatcher};
 use regex::Regex;
 use std::fs;
@@ -143,19 +146,30 @@ simple_builtin!(
 simple_builtin!(
     RmBuiltin,
     "rm",
-    "rm [-r] [-f] [--permanent] <path...>",
-    "Remove files/directories. Default is safe-trash move when possible.",
-    &["rm -rf target"],
+    "rm [-r] [-f|--force] [-F|--fast] [-t|--trash] [-n|--dry-run] [-s|--safe] <path...>",
+    "Remove files/directories with safety, dry-run and fast engine.",
+    &[
+        "rm -r node_modules --fast",
+        "rm build --dry-run",
+        "rm dist --trash"
+    ],
     |args, _input, ctx| {
         let mut recursive = false;
         let mut force = false;
-        let mut permanent = false;
+        let mut fast = false;
+        let mut trash = false;
+        let mut dry_run = false;
+        let mut safe = false;
         let mut targets = Vec::new();
         for a in args {
             match a.as_str() {
                 "-r" | "-R" | "--recursive" => recursive = true,
                 "-f" | "--force" => force = true,
-                "--permanent" => permanent = true,
+                "-F" | "--fast" => fast = true,
+                "-t" | "--trash" => trash = true,
+                "-n" | "--dry-run" => dry_run = true,
+                "-s" | "--safe" => safe = true,
+                "--permanent" => {}
                 _ if a.starts_with('-') => {}
                 _ => targets.push(a.clone()),
             }
@@ -163,57 +177,71 @@ simple_builtin!(
         if targets.is_empty() {
             bail!("rm expects path(s)")
         }
+        if safe {
+            force = false;
+            fast = false;
+        }
+
+        let mut rows = Vec::new();
+        let mut total = DeleteSummary::default();
 
         for t in targets {
             let p = resolve_path(ctx.env.cwd(), &t);
-            let result = if !permanent {
-                safe_trash_move(&p, recursive)
-            } else if p.is_dir() {
-                if recursive {
-                    fs::remove_dir_all(&p)
-                } else {
-                    fs::remove_dir(&p)
+            if !p.exists() {
+                if force {
+                    continue;
                 }
-            } else {
-                fs::remove_file(&p)
-            };
-            if let Err(e) = result {
+                bail!("path not found: {}", p.display());
+            }
+            if let Err(e) = reject_protected_path(&p) {
                 if !force {
-                    return Err(e.into());
+                    return Err(e);
+                }
+                continue;
+            }
+            let mode = if trash {
+                RmMode::Trash
+            } else if fast || detect_fast_candidate(&p) {
+                RmMode::Fast
+            } else {
+                RmMode::Normal
+            };
+            let stats = scan_path(&p).stats;
+            if dry_run {
+                rows.push(dry_run_record(&p, mode, &stats));
+                continue;
+            }
+            let opts = RmOptions { recursive, mode };
+            match execute_delete(&p, &opts) {
+                Ok(s) => {
+                    total.deleted_files += s.deleted_files;
+                    total.deleted_dirs += s.deleted_dirs;
+                    total.skipped += s.skipped;
+                    total.elapsed_ms += s.elapsed_ms;
+                    total.mode = s.mode.clone();
+                    total.failed.extend(s.failed);
+                }
+                Err(e) => {
+                    if !force {
+                        return Err(e);
+                    }
                 }
             }
         }
-        Ok(BuiltinOutcome::ok(PipelineData::Empty))
+        if dry_run {
+            return Ok(BuiltinOutcome::ok(PipelineData::Value(Value::Table(
+                Table::new(rows),
+            ))));
+        }
+        if !total.failed.is_empty() && !force {
+            let first = &total.failed[0];
+            bail!("delete failed: {} ({})", first.0.display(), first.1);
+        }
+        Ok(BuiltinOutcome::ok(PipelineData::Value(Value::Record(
+            total.to_record(),
+        ))))
     }
 );
-
-fn safe_trash_move(path: &Path, recursive: bool) -> std::io::Result<()> {
-    let Some(name) = path.file_name().map(|s| s.to_owned()) else {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "invalid path",
-        ));
-    };
-    let trash_root = DoshPaths::detect()
-        .map(|p| p.cache_dir().join("trash"))
-        .unwrap_or_else(|_| std::env::temp_dir().join("dosh-trash"));
-    fs::create_dir_all(&trash_root)?;
-    let mut target = trash_root.join(name);
-    if target.exists() {
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis())
-            .unwrap_or(0);
-        target = trash_root.join(format!(
-            "{}-{stamp}",
-            path.file_name().and_then(|s| s.to_str()).unwrap_or("item")
-        ));
-    }
-    if path.is_dir() && !recursive {
-        return fs::remove_dir(path);
-    }
-    fs::rename(path, target)
-}
 
 simple_builtin!(
     MvBuiltin,

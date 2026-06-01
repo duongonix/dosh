@@ -318,6 +318,9 @@ fn interpolate_arg(input: &str, state: &RuntimeState) -> String {
                 let name = chars[i + 1..j].iter().collect::<String>();
                 if let Some(v) = resolve_variable_path(&name, state) {
                     out.push_str(&expression_to_arg_string(&v));
+                } else {
+                    out.push('$');
+                    out.push_str(&name);
                 }
                 i = j;
                 continue;
@@ -451,12 +454,19 @@ fn record_from_snapshot(
 
 #[cfg(test)]
 mod tests {
-    use super::edit_distance;
+    use super::{RuntimeState, edit_distance, interpolate_arg};
 
     #[test]
     fn edit_distance_basic() {
         assert_eq!(edit_distance("help", "help"), 0);
         assert_eq!(edit_distance("hep", "help"), 1);
         assert!(edit_distance("xyz", "help") >= 3);
+    }
+
+    #[test]
+    fn interpolate_preserves_unknown_closure_vars() {
+        let state = RuntimeState::new();
+        assert_eq!(interpolate_arg("$it > 2", &state), "$it > 2");
+        assert_eq!(interpolate_arg("$acc + $it", &state), "$acc + $it");
     }
 }
