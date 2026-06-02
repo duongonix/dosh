@@ -87,6 +87,12 @@ pub fn detect_fast_candidate(path: &Path) -> bool {
 }
 
 pub fn reject_protected_path(path: &Path) -> anyhow::Result<()> {
+    if is_root_path(path) {
+        bail!(
+            "Refusing to delete protected system path: {}",
+            path.display()
+        );
+    }
     let p = normalize_for_compare(path)?;
     if is_protected(&p) {
         bail!(
@@ -95,6 +101,16 @@ pub fn reject_protected_path(path: &Path) -> anyhow::Result<()> {
         );
     }
     Ok(())
+}
+
+fn is_root_path(path: &Path) -> bool {
+    use std::path::Component;
+    let mut components = path.components();
+    match (components.next(), components.next(), components.next()) {
+        (Some(Component::RootDir), None, None) => true,
+        (Some(Component::Prefix(_)), Some(Component::RootDir), None) => true,
+        _ => false,
+    }
 }
 
 fn normalize_for_compare(path: &Path) -> anyhow::Result<String> {
@@ -349,5 +365,6 @@ mod tests {
         {
             assert!(reject_protected_path(Path::new("/")).is_err());
         }
+        assert!(!is_root_path(Path::new("normal-relative-path")));
     }
 }
