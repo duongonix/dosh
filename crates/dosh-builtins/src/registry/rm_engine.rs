@@ -105,12 +105,15 @@ fn normalize_for_compare(path: &Path) -> anyhow::Result<String> {
     } else {
         std::env::current_dir()?.join(path)
     };
-    let norm = abs
+    let mut norm = abs
         .to_string_lossy()
         .replace('\\', "/")
         .replace("//?/", "")
         .trim_end_matches('/')
         .to_ascii_lowercase();
+    if norm.is_empty() {
+        norm = "/".to_string();
+    }
     Ok(norm)
 }
 
